@@ -3,12 +3,14 @@
 class MemoryLane {
     constructor() {
         this.memories = this.loadMemories();
+        this.chatHistory = this.loadChatHistory();
         this.init();
     }
 
     init() {
         this.setupEventListeners();
         this.renderMemories();
+        this.renderChatHistory();
     }
 
     setupEventListeners() {
@@ -39,6 +41,9 @@ class MemoryLane {
             document.getElementById('import-file').click();
         });
         document.getElementById('import-file').addEventListener('change', (e) => this.importData(e));
+
+        // Chat conversation controls
+        document.getElementById('new-chat-btn').addEventListener('click', () => this.startNewConversation());
     }
 
     switchTab(tabName) {
@@ -147,11 +152,13 @@ class MemoryLane {
     async sendChatMessage() {
         const input = document.getElementById('chat-input');
         const message = input.value.trim();
-        
+
         if (!message) return;
 
-        // Add user message to chat
+        // Add user message to chat and persist it
         this.addChatMessage(message, 'user');
+        this.chatHistory.push({ role: 'user', content: message });
+        this.saveChatHistory();
         input.value = '';
 
         // Show loading
@@ -170,8 +177,9 @@ class MemoryLane {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: message,
-                    memories: this.memories
+                    message,
+                    memories: this.memories,
+                    chatHistory: this.chatHistory.slice(0, -1)
                 })
             });
 
@@ -183,11 +191,17 @@ class MemoryLane {
             }
 
             const data = await response.json();
-            this.addChatMessage(data.response, 'assistant');
+            const assistantReply = data.response || 'I could not generate a response.';
+            this.addChatMessage(assistantReply, 'assistant');
+            this.chatHistory.push({ role: 'assistant', content: assistantReply });
+            this.saveChatHistory();
 
         } catch (error) {
             loadingDiv.remove();
-            this.addChatMessage('Sorry, I encountered an error. Please make sure you\'ve set up the Netlify function with your API key.', 'system');
+            const errorMessage = "Sorry, I encountered an error. Please make sure you've set up the Netlify function with your API key.";
+            this.addChatMessage(errorMessage, 'system');
+            this.chatHistory.push({ role: 'system', content: errorMessage });
+            this.saveChatHistory();
             console.error('Chat error:', error);
         }
     }
@@ -199,6 +213,29 @@ class MemoryLane {
         messageDiv.textContent = text;
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    renderChatHistory() {
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.innerHTML = '';
+
+        this.chatHistory.forEach(message => {
+            this.addChatMessage(message.content, message.role);
+        });
+    }
+
+    startNewConversation() {
+        if (!this.chatHistory.length) {
+            this.showNotification('You are already in a fresh conversation ✨');
+            return;
+        }
+
+        if (confirm('Start a new conversation? This clears the current Ask AI chat history.')) {
+            this.chatHistory = [];
+            this.saveChatHistory();
+            this.renderChatHistory();
+            this.showNotification('Started a new conversation ✨');
+        }
     }
 
     formatCategory(category) {
@@ -295,8 +332,27 @@ class MemoryLane {
         return stored ? JSON.parse(stored) : [];
     }
 
+    loadChatHistory() {
+        const stored = localStorage.getItem('memoryLaneChatHistory');
+        const parsed = stored ? JSON.parse(stored) : [];
+
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed.filter(entry => (
+            entry &&
+            ['user', 'assistant', 'system'].includes(entry.role) &&
+            typeof entry.content === 'string'
+        ));
+    }
+
     saveMemories() {
         localStorage.setItem('memoryLaneData', JSON.stringify(this.memories));
+    }
+
+    saveChatHistory() {
+        localStorage.setItem('memoryLaneChatHistory', JSON.stringify(this.chatHistory));
     }
 }
 
