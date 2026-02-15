@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Lane - Relationship Database</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💝 Memory Lane</h1>
+            <p class="subtitle">Keep track of the little things that matter</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="add">Add Memory</button>
+            <button class="tab-btn" data-tab="browse">Browse</button>
+            <button class="tab-btn" data-tab="chat">Ask AI</button>
+        </div>
+
+        <!-- Add Memory Tab -->
+        <div class="tab-content active" id="add-tab">
+            <div class="add-memory-section">
+                <h2>Add New Memory</h2>
+                <form id="memory-form">
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="gifts">Gift Ideas</option>
+                            <option value="travel">Travel Wishes</option>
+                            <option value="food">Food & Restaurants</option>
+                            <option value="activities">Activities & Hobbies</option>
+                            <option value="favorites">Favorites & Preferences</option>
+                            <option value="memories">Special Memories</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="memory-text">What did she say?</label>
+                        <textarea id="memory-text" rows="4" placeholder="e.g., She mentioned loving handmade pottery and wants to take a class..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tags">Tags (optional)</label>
+                        <input type="text" id="tags" placeholder="e.g., birthday, anniversary, casual">
+                        <small>Separate with commas</small>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Save Memory</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Browse Tab -->
+        <div class="tab-content" id="browse-tab">
+            <div class="browse-section">
+                <h2>Your Memories</h2>
+                <div class="filter-section">
+                    <select id="filter-category">
+                        <option value="all">All Categories</option>
+                        <option value="gifts">Gift Ideas</option>
+                        <option value="travel">Travel Wishes</option>
+                        <option value="food">Food & Restaurants</option>
+                        <option value="activities">Activities & Hobbies</option>
+                        <option value="favorites">Favorites & Preferences</option>
+                        <option value="memories">Special Memories</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="text" id="search-box" placeholder="Search memories...">
+                </div>
+                <div id="memories-list"></div>
+            </div>
+        </div>
+
+        <!-- Chat Tab -->
+        <div class="tab-content" id="chat-tab">
+            <div class="chat-section">
+                <h2>Ask About Your Memories</h2>
+                <p class="chat-description">Ask questions like "What would be a good birthday gift?" or "Where does she want to travel?"</p>
+                
+                <div id="chat-messages"></div>
+                
+                <form id="chat-form">
+                    <div class="chat-input-group">
+                        <input type="text" id="chat-input" placeholder="Ask a question..." required>
+                        <button type="submit" class="btn-primary">Send</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Export/Import Section -->
+        <div class="utility-section">
+            <button id="export-btn" class="btn-secondary">Export Data</button>
+            <button id="import-btn" class="btn-secondary">Import Data</button>
+            <input type="file" id="import-file" accept=".json" style="display: none;">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
