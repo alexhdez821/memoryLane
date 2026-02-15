@@ -27,7 +27,7 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        const { message, memories } = JSON.parse(event.body);
+        const { message, memories, chatHistory = [] } = JSON.parse(event.body);
 
         // Initialize Anthropic client with API key from environment variable
         const anthropic = new Anthropic({
@@ -50,16 +50,13 @@ When answering:
 - Help think through gift ideas, date plans, etc. based on her interests`;
 
         // Call Claude API
+        const conversation = buildConversation(chatHistory, message);
+
         const response = await anthropic.messages.create({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 1000,
             system: systemPrompt,
-            messages: [
-                {
-                    role: 'user',
-                    content: message
-                }
-            ]
+            messages: conversation
         });
 
         return {
@@ -82,6 +79,30 @@ When answering:
         };
     }
 };
+
+
+function buildConversation(chatHistory, latestMessage) {
+    const validHistory = Array.isArray(chatHistory)
+        ? chatHistory.filter(entry => (
+            entry &&
+            ['user', 'assistant'].includes(entry.role) &&
+            typeof entry.content === 'string' &&
+            entry.content.trim()
+        ))
+        : [];
+
+    const conversation = validHistory.map(entry => ({
+        role: entry.role,
+        content: entry.content
+    }));
+
+    conversation.push({
+        role: 'user',
+        content: latestMessage
+    });
+
+    return conversation;
+}
 
 function buildMemoryContext(memories) {
     if (!memories || memories.length === 0) {
