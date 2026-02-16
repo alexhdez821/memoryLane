@@ -69,7 +69,12 @@
                         <option value="other">Other</option>
                     </select>
                     <input type="text" id="search-box" placeholder="Search memories...">
+                    <label class="semantic-toggle" for="semantic-search-toggle">
+                        <input type="checkbox" id="semantic-search-toggle" checked>
+                        Semantic Search
+                    </label>
                 </div>
+                <div id="browse-message" class="browse-message" aria-live="polite"></div>
                 <div id="memories-list"></div>
             </div>
         </div>
@@ -79,9 +84,40 @@
             <div class="chat-section">
                 <div class="chat-header">
                     <h2>Ask About Your Memories</h2>
-                    <button id="new-chat-btn" type="button" class="btn-secondary">New Conversation</button>
+                    <div class="chat-actions">
+                        <button id="gift-ideas-btn" type="button" class="btn-secondary">Generate Gift Ideas</button>
+                        <button id="new-chat-btn" type="button" class="btn-secondary">New Conversation</button>
+                    </div>
                 </div>
                 <p class="chat-description">Ask questions like "What would be a good birthday gift?" or "Where does she want to travel?"</p>
+                <p class="chat-privacy-note">AI uses only the memories you've saved.</p>
+
+                <div id="gift-ideas-panel" class="gift-panel" hidden>
+                    <h3>Gift Idea Preferences</h3>
+                    <div class="gift-panel-grid">
+                        <label>
+                            Occasion
+                            <select id="gift-occasion">
+                                <option value="birthday">Birthday</option>
+                                <option value="anniversary">Anniversary</option>
+                                <option value="holiday">Holiday</option>
+                                <option value="just because">Just Because</option>
+                            </select>
+                        </label>
+                        <label>
+                            Budget
+                            <input id="gift-budget" type="text" placeholder="$50-$150">
+                        </label>
+                        <label>
+                            Timeframe
+                            <input id="gift-timeframe" type="text" placeholder="By next weekend">
+                        </label>
+                    </div>
+                    <div class="gift-panel-actions">
+                        <button id="gift-generate-btn" type="button" class="btn-primary">Generate</button>
+                        <button id="gift-cancel-btn" type="button" class="btn-secondary">Cancel</button>
+                    </div>
+                </div>
                 
                 <div id="chat-messages"></div>
                 
