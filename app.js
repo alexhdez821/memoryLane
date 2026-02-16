@@ -5,8 +5,7 @@ class MemoryLane {
         this.memories = this.loadMemories();
         this.chatHistory = this.loadChatHistory();
         this.currentBrowseMessage = '';
-        this.semanticFallbackActive = false;
-        this.embedModel = 'claude-semantic-v1';
+        this.editingMemoryId = null;
         this.init();
     }
 
@@ -37,7 +36,6 @@ class MemoryLane {
         // Filter and search
         document.getElementById('filter-category').addEventListener('change', () => this.renderMemories());
         document.getElementById('search-box').addEventListener('input', () => this.renderMemories());
-        document.getElementById('semantic-search-toggle').addEventListener('change', () => this.renderMemories());
 
         // Export/Import
         document.getElementById('export-btn').addEventListener('click', () => this.exportData());
@@ -76,24 +74,35 @@ class MemoryLane {
         const tagsInput = document.getElementById('tags').value;
         const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
 
+        if (this.editingMemoryId) {
+            const memory = this.memories.find(m => m.id === this.editingMemoryId);
+            if (!memory) {
+                this.showNotification('Memory not found');
+                return;
+            }
+
+            memory.category = category;
+            memory.text = text;
+            memory.tags = tags;
+            memory.date = new Date().toISOString();
+
+            this.editingMemoryId = null;
+            this.saveMemories();
+            this.setMemoryFormMode(false);
+            document.getElementById('memory-form').reset();
+            this.showNotification('Memory updated ✨');
+            this.switchTab('browse');
+            this.renderMemories();
+            return;
+        }
+
         const memory = {
             id: Date.now(),
             category,
             text,
             tags,
-            date: new Date().toISOString(),
-            embedding: null,
-            embeddingModel: null
+            date: new Date().toISOString()
         };
-
-        // Best effort embed on creation; save even if embed fails.
-        try {
-            const [vector] = await this.fetchEmbeddings([this.buildMemoryEmbeddingText(memory)]);
-            memory.embedding = vector;
-            memory.embeddingModel = this.embedModel;
-        } catch (error) {
-            console.warn('Embedding failed during save, continuing without embedding:', error);
-        }
 
         this.memories.push(memory);
         this.saveMemories();
@@ -122,52 +131,23 @@ class MemoryLane {
         const filterCategory = document.getElementById('filter-category').value;
         const searchTermRaw = document.getElementById('search-box').value.trim();
         const searchTerm = searchTermRaw.toLowerCase();
-        const semanticOn = document.getElementById('semantic-search-toggle').checked;
 
         let filtered = [...this.memories];
+        this.setBrowseMessage('');
 
-        // Apply category filter
         if (filterCategory !== 'all') {
             filtered = filtered.filter(m => m.category === filterCategory);
         }
 
-        let semanticScores = new Map();
-        this.setBrowseMessage('');
-
-        if (searchTermRaw && semanticOn) {
-            try {
-                await this.ensureEmbeddingsForMemories(filtered);
-                const [queryVector] = await this.fetchEmbeddings([searchTermRaw]);
-
-                semanticScores = new Map(filtered.map(memory => {
-                    const score = this.cosineSimilarity(queryVector, memory.embedding || []);
-                    return [memory.id, score];
-                }));
-
-                filtered.sort((a, b) => (semanticScores.get(b.id) || 0) - (semanticScores.get(a.id) || 0));
-                this.semanticFallbackActive = false;
-                this.setBrowseMessage('Showing semantic matches ranked by similarity.');
-            } catch (error) {
-                console.error('Semantic search failed, falling back to keyword search:', error);
-                this.semanticFallbackActive = true;
-                this.setBrowseMessage('Semantic search is temporarily unavailable. Showing keyword search instead.');
-                this.showNotification('Semantic search unavailable right now, using keyword search.');
-            }
-        }
-
-        // Keyword fallback/default behavior
-        if (searchTermRaw && (!semanticOn || this.semanticFallbackActive)) {
+        if (searchTermRaw) {
             filtered = filtered.filter(m =>
                 m.text.toLowerCase().includes(searchTerm) ||
-                m.tags.some(t => t.toLowerCase().includes(searchTerm)) ||
+                (m.tags || []).some(t => t.toLowerCase().includes(searchTerm)) ||
                 m.category.toLowerCase().includes(searchTerm)
             );
         }
 
-        // Chronological list when search box is empty
-        if (!searchTermRaw || (!semanticOn || this.semanticFallbackActive)) {
-            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-        }
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (filtered.length === 0) {
             container.innerHTML = `
@@ -179,100 +159,69 @@ class MemoryLane {
             return;
         }
 
-        const showMatchScore = searchTermRaw && semanticOn && !this.semanticFallbackActive;
-
         container.innerHTML = filtered.map(memory => `
             <div class="memory-card">
                 <div class="memory-header">
                     <span class="memory-category">${this.formatCategory(memory.category)}</span>
-                    <div>
-                        <span class="memory-date">${this.formatDate(memory.date)}</span>
-                        ${showMatchScore ? `<span class="match-score">Match: ${(semanticScores.get(memory.id) || 0).toFixed(2)}</span>` : ''}
-                    </div>
+                    <span class="memory-date">${this.formatDate(memory.date)}</span>
                 </div>
                 <div class="memory-text">${memory.text}</div>
-                ${memory.tags.length > 0 ? `
+                ${(memory.tags || []).length > 0 ? `
                     <div class="memory-tags">
-                        ${memory.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${(memory.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
                     </div>
                 ` : ''}
-                <button class="delete-btn" onclick="app.deleteMemory(${memory.id})">Delete</button>
+                <div class="memory-actions">
+                    <button class="edit-btn" onclick="app.startEditMemory(${memory.id})">Edit</button>
+                    <button class="delete-btn" onclick="app.deleteMemory(${memory.id})">Delete</button>
+                </div>
             </div>
         `).join('');
     }
 
-    async ensureEmbeddingsForMemories(memories) {
-        const missing = memories.filter(memory => !Array.isArray(memory.embedding) || memory.embedding.length === 0);
-
-        if (!missing.length) {
+    startEditMemory(id) {
+        const memory = this.memories.find(m => m.id === id);
+        if (!memory) {
+            this.showNotification('Memory not found');
             return;
         }
 
-        for (let i = 0; i < missing.length; i += 20) {
-            const batch = missing.slice(i, i + 20);
-            const texts = batch.map(memory => this.buildMemoryEmbeddingText(memory));
-            const vectors = await this.fetchEmbeddings(texts);
-
-            batch.forEach((memory, idx) => {
-                memory.embedding = vectors[idx] || null;
-                memory.embeddingModel = this.embedModel;
-            });
-        }
-
-        this.saveMemories();
+        document.getElementById('category').value = memory.category;
+        document.getElementById('memory-text').value = memory.text;
+        document.getElementById('tags').value = (memory.tags || []).join(', ');
+        this.editingMemoryId = id;
+        this.setMemoryFormMode(true);
+        this.switchTab('add');
+        document.getElementById('memory-text').focus();
     }
 
-    buildMemoryEmbeddingText(memory) {
-        const tags = Array.isArray(memory.tags) ? memory.tags.join(', ') : '';
-        return `${memory.category || ''} | ${tags} | ${memory.text || ''}`;
+    cancelEditMemory() {
+        this.editingMemoryId = null;
+        document.getElementById('memory-form').reset();
+        this.setMemoryFormMode(false);
     }
 
-    async fetchEmbeddings(inputs) {
-        const response = await fetch('/api/embed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ inputs })
-        });
+    setMemoryFormMode(editing) {
+        const sectionTitle = document.querySelector('.add-memory-section h2');
+        const submitButton = document.querySelector('#memory-form .btn-primary');
+        let cancelButton = document.getElementById('cancel-edit-btn');
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch embeddings');
+        sectionTitle.textContent = editing ? 'Edit Memory' : 'Add New Memory';
+        submitButton.textContent = editing ? 'Update Memory' : 'Save Memory';
+
+        if (editing) {
+            if (!cancelButton) {
+                cancelButton = document.createElement('button');
+                cancelButton.type = 'button';
+                cancelButton.id = 'cancel-edit-btn';
+                cancelButton.className = 'btn-secondary';
+                cancelButton.textContent = 'Cancel';
+                cancelButton.addEventListener('click', () => this.cancelEditMemory());
+                submitButton.insertAdjacentElement('afterend', cancelButton);
+            }
+        } else if (cancelButton) {
+            cancelButton.remove();
         }
-
-        const data = await response.json();
-        if (!data || !Array.isArray(data.vectors)) {
-            throw new Error('Invalid embeddings response');
-        }
-
-        if (typeof data.model === 'string') {
-            this.embedModel = data.model;
-        }
-
-        return data.vectors;
-    }
-
-    cosineSimilarity(vectorA, vectorB) {
-        if (!Array.isArray(vectorA) || !Array.isArray(vectorB) || !vectorA.length || !vectorB.length || vectorA.length !== vectorB.length) {
-            return 0;
-        }
-
-        let dot = 0;
-        let magA = 0;
-        let magB = 0;
-
-        for (let i = 0; i < vectorA.length; i += 1) {
-            dot += vectorA[i] * vectorB[i];
-            magA += vectorA[i] * vectorA[i];
-            magB += vectorB[i] * vectorB[i];
-        }
-
-        const denominator = Math.sqrt(magA) * Math.sqrt(magB);
-        if (!denominator) {
-            return 0;
-        }
-
-        return dot / denominator;
     }
 
     setBrowseMessage(message) {
@@ -460,15 +409,18 @@ class MemoryLane {
     }
 
     startNewConversation() {
-        if (!this.chatHistory.length) {
+        const chatMessages = document.getElementById('chat-messages');
+        const hasVisibleMessages = chatMessages.children.length > 0;
+
+        if (!this.chatHistory.length && !hasVisibleMessages) {
             this.showNotification('You are already in a fresh conversation ✨');
             return;
         }
 
-        if (confirm('Start a new conversation? This clears the current Ask AI chat history.')) {
+        if (confirm('Start a new conversation? This clears the current Ask AI chat window.')) {
             this.chatHistory = [];
             this.saveChatHistory();
-            this.renderChatHistory();
+            chatMessages.innerHTML = '';
             this.showNotification('Started a new conversation ✨');
         }
     }
@@ -545,11 +497,7 @@ class MemoryLane {
                 const imported = JSON.parse(e.target.result);
                 if (Array.isArray(imported)) {
                     if (confirm(`This will import ${imported.length} memories. Continue?`)) {
-                        this.memories = imported.map(memory => ({
-                            ...memory,
-                            embedding: Array.isArray(memory.embedding) ? memory.embedding : null,
-                            embeddingModel: memory.embeddingModel || null
-                        }));
+                        this.memories = imported.map(memory => this.normalizeMemory(memory));
                         this.saveMemories();
                         this.renderMemories();
                         this.showNotification('Data imported successfully! 📤');
@@ -574,11 +522,18 @@ class MemoryLane {
             return [];
         }
 
-        return parsed.map(memory => ({
-            ...memory,
-            embedding: Array.isArray(memory.embedding) ? memory.embedding : null,
-            embeddingModel: memory.embeddingModel || null
-        }));
+        return parsed.map(memory => this.normalizeMemory(memory));
+    }
+
+
+    normalizeMemory(memory) {
+        return {
+            id: memory?.id || Date.now() + Math.floor(Math.random() * 1000),
+            category: memory?.category || 'other',
+            text: typeof memory?.text === 'string' ? memory.text : '',
+            tags: Array.isArray(memory?.tags) ? memory.tags.filter(tag => typeof tag === 'string') : [],
+            date: memory?.date || new Date().toISOString()
+        };
     }
 
     loadChatHistory() {
