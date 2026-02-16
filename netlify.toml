@@ -3,6 +3,21 @@
   publish = "."
 
 [[redirects]]
+  from = "/api/embed"
+  to = "/.netlify/functions/embed"
+  status = 200
+
+[[redirects]]
+  from = "/api/gift-ideas"
+  to = "/.netlify/functions/gift-ideas"
+  status = 200
+
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/chat"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
