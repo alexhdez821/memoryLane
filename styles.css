@@ -179,18 +179,6 @@ header h1 {
     font-size: 1em;
 }
 
-.semantic-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9em;
-    color: #555;
-    white-space: nowrap;
-}
-
-.semantic-toggle input {
-    width: auto;
-}
 
 .browse-message {
     min-height: 20px;
@@ -199,13 +187,6 @@ header h1 {
     font-size: 0.9em;
 }
 
-.match-score {
-    display: inline-block;
-    margin-left: 8px;
-    color: #764ba2;
-    font-size: 0.8em;
-    font-weight: 600;
-}
 
 #memories-list {
     display: grid;
@@ -280,6 +261,27 @@ header h1 {
 
 .delete-btn:hover {
     background: #ff3838;
+}
+
+.edit-btn {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+    padding: 5px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85em;
+    margin-top: 10px;
+}
+
+.edit-btn:hover {
+    background: #667eea;
+    color: white;
+}
+
+.memory-actions {
+    display: flex;
+    gap: 8px;
 }
 
 /* Chat Section */
@@ -559,15 +561,8 @@ header h1 {
     }
 
     .filter-section select,
-    .filter-section input,
-    .semantic-toggle {
+    .filter-section input {
         width: 100%;
-    }
-
-    .semantic-toggle {
-        justify-content: flex-start;
-        flex-basis: 100%;
-        white-space: normal;
     }
 
     /* Tighten list card spacing */
@@ -586,6 +581,10 @@ header h1 {
 
     .memory-text {
         line-height: 1.45;
+    }
+
+    .memory-actions {
+        gap: 6px;
     }
 
     /* Utility actions stack cleanly */
@@ -653,4 +652,8 @@ header h1 {
     .chat-input-group .btn-primary {
         align-self: flex-end;
     }
+}
+
+#cancel-edit-btn {
+    margin-left: 8px;
 }
