@@ -566,6 +566,8 @@ header h1 {
 
     .semantic-toggle {
         justify-content: flex-start;
+        flex-basis: 100%;
+        white-space: normal;
     }
 
     /* Tighten list card spacing */
