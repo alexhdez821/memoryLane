@@ -1,6 +1,6 @@
-const OpenAI = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
 
-const MODEL = 'gpt-4.1-mini';
+const MODEL = 'claude-sonnet-4-20250514';
 
 function sanitizeMemories(memories) {
     if (!Array.isArray(memories)) {
@@ -48,26 +48,30 @@ exports.handler = async (event) => {
         }
 
         const safeMemories = sanitizeMemories(memories);
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-        const prompt = [
-            'You are an assistant that generates gift ideas.',
-            'ONLY use facts from the provided memories. Do not invent details.',
-            'Prefer ideas grounded in recurring themes and tags.',
-            'Return 5-8 ideas with diverse effort and price ranges.',
-            'Output STRICT JSON only, no markdown.',
-            'Required schema:',
-            '{"ideas":[{"title":"","why":"","priceRange":"","effort":"low|medium|high","relatedMemories":["memoryIdOrSnippet"]}],"followUps":[""]}',
-            `Question: ${question}`,
-            `Memories: ${JSON.stringify(safeMemories)}`
-        ].join('\n');
-
-        const response = await client.responses.create({
+        const response = await anthropic.messages.create({
             model: MODEL,
-            input: prompt
+            max_tokens: 1600,
+            temperature: 0.2,
+            system: [
+                'You generate gift ideas from a user memory list.',
+                'ONLY use provided memories. Never invent facts.',
+                'Prefer recurring tags/themes when picking ideas.',
+                'Return 5-8 ideas with a mix of budget and effort.',
+                'Return STRICT JSON only and exactly this top-level schema:',
+                '{"ideas":[{"title":"","why":"","priceRange":"","effort":"low|medium|high","relatedMemories":["memoryIdOrSnippet"]}],"followUps":[""]}'
+            ].join('\n'),
+            messages: [{
+                role: 'user',
+                content: JSON.stringify({
+                    question,
+                    memories: safeMemories
+                })
+            }]
         });
 
-        const text = response.output_text || '';
+        const text = response?.content?.[0]?.text || '';
         const parsed = extractJsonObject(text);
 
         return {

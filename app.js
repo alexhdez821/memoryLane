@@ -6,7 +6,7 @@ class MemoryLane {
         this.chatHistory = this.loadChatHistory();
         this.currentBrowseMessage = '';
         this.semanticFallbackActive = false;
-        this.embedModel = 'text-embedding-3-small';
+        this.embedModel = 'claude-semantic-v1';
         this.init();
     }
 
@@ -243,6 +243,10 @@ class MemoryLane {
         const data = await response.json();
         if (!data || !Array.isArray(data.vectors)) {
             throw new Error('Invalid embeddings response');
+        }
+
+        if (typeof data.model === 'string') {
+            this.embedModel = data.model;
         }
 
         return data.vectors;

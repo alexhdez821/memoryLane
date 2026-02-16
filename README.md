@@ -8,7 +8,7 @@ A personal relationship memory app with AI-assisted chat, semantic browse search
 - Browse memories with:
   - Chronological list (default)
   - Keyword search
-  - **Semantic Search** (OpenAI embeddings + cosine similarity)
+  - **Semantic Search** (server-generated semantic vectors + cosine similarity)
 - Ask AI questions about your saved memories
 - Generate gift ideas grounded in saved memories
 - Export/import local memory data
@@ -28,11 +28,9 @@ Create `.env` in project root (for local) or add in Netlify site settings:
 
 ```bash
 ANTHROPIC_API_KEY=your_anthropic_key
-OPENAI_API_KEY=your_openai_key
 ```
 
-- `ANTHROPIC_API_KEY` is used by `/api/chat`.
-- `OPENAI_API_KEY` is used by `/api/embed` and `/api/gift-ideas`.
+- `ANTHROPIC_API_KEY` is used by `/api/chat`, `/api/embed`, and `/api/gift-ideas`.
 - API keys are server-side only (Netlify Functions), not exposed in frontend code.
 
 ## Serverless Functions and Routing
@@ -58,7 +56,7 @@ When a memory is saved, the app embeds this combined text:
 The memory object stores:
 
 - `embedding` (vector)
-- `embeddingModel` (`text-embedding-3-small`)
+- `embeddingModel` (`claude-semantic-v1`)
 
 In Browse:
 
@@ -99,6 +97,5 @@ The UI renders ideas as cards and shows follow-up questions.
 
 - HTML, CSS, vanilla JavaScript
 - Netlify Functions (Node 18+)
-- Anthropic SDK (chat)
-- OpenAI SDK (embeddings + gift ideas)
+- Anthropic SDK (chat + semantic vectors + gift generation)
 - localStorage for persistence

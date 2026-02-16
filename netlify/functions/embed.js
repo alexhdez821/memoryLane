@@ -1,6 +1,38 @@
-const OpenAI = require('openai');
+// Netlify serverless function for semantic vectors via Anthropic
+const Anthropic = require('@anthropic-ai/sdk');
 
-const EMBEDDING_MODEL = 'text-embedding-3-small';
+const VECTOR_DIMENSIONS = 128;
+const EMBEDDING_MODEL = 'claude-semantic-v1';
+const CLAUDE_MODEL = 'claude-3-5-haiku-20241022';
+
+function extractJsonObject(text) {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+        throw new Error('No JSON object found in model response');
+    }
+    return JSON.parse(match[0]);
+}
+
+function normalizeVector(vector) {
+    if (!Array.isArray(vector)) {
+        return null;
+    }
+
+    const asNumbers = vector.map(value => Number(value));
+    if (asNumbers.some(value => Number.isNaN(value) || !Number.isFinite(value))) {
+        return null;
+    }
+
+    if (asNumbers.length === VECTOR_DIMENSIONS) {
+        return asNumbers;
+    }
+
+    if (asNumbers.length > VECTOR_DIMENSIONS) {
+        return asNumbers.slice(0, VECTOR_DIMENSIONS);
+    }
+
+    return [...asNumbers, ...Array(VECTOR_DIMENSIONS - asNumbers.length).fill(0)];
+}
 
 exports.handler = async (event) => {
     const headers = {
@@ -28,18 +60,39 @@ exports.handler = async (event) => {
             };
         }
 
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const response = await client.embeddings.create({
-            model: EMBEDDING_MODEL,
-            input: inputs
+        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const response = await anthropic.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: 3500,
+            temperature: 0,
+            system: `You convert text inputs into semantic vectors.
+Return STRICT JSON only with this shape:
+{"model":"${EMBEDDING_MODEL}","vectors":[[number,...],[number,...]]}
+Rules:
+- Return exactly one vector per input, same order.
+- Each vector MUST contain exactly ${VECTOR_DIMENSIONS} numeric values.
+- Values should be floats typically in range [-1, 1].
+- No markdown, no commentary.`,
+            messages: [{
+                role: 'user',
+                content: JSON.stringify({ inputs })
+            }]
         });
+
+        const text = response?.content?.[0]?.text || '';
+        const parsed = extractJsonObject(text);
+        const vectors = Array.isArray(parsed.vectors)
+            ? parsed.vectors.map(normalizeVector)
+            : [];
+
+        if (vectors.length !== inputs.length || vectors.some(vector => !vector)) {
+            throw new Error('Invalid vector output from model');
+        }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({
-                vectors: response.data.map(item => item.embedding)
-            })
+            body: JSON.stringify({ vectors, model: EMBEDDING_MODEL })
         };
     } catch (error) {
         console.error('Embedding error:', error);
