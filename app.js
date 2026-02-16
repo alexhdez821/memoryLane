@@ -409,15 +409,18 @@ class MemoryLane {
     }
 
     startNewConversation() {
-        if (!this.chatHistory.length) {
+        const chatMessages = document.getElementById('chat-messages');
+        const hasVisibleMessages = chatMessages.children.length > 0;
+
+        if (!this.chatHistory.length && !hasVisibleMessages) {
             this.showNotification('You are already in a fresh conversation ✨');
             return;
         }
 
-        if (confirm('Start a new conversation? This clears the current Ask AI chat history.')) {
+        if (confirm('Start a new conversation? This clears the current Ask AI chat window.')) {
             this.chatHistory = [];
             this.saveChatHistory();
-            this.renderChatHistory();
+            chatMessages.innerHTML = '';
             this.showNotification('Started a new conversation ✨');
         }
     }
