@@ -1,3 +1,9 @@
+/*
+Quick mobile test:
+1) Open Chrome DevTools → Toggle device toolbar.
+2) Validate layout on iPhone SE and iPhone 14/15 viewport sizes.
+*/
+
 * {
     margin: 0;
     padding: 0;
@@ -466,16 +472,185 @@ header h1 {
     header h1 {
         font-size: 2em;
     }
-    
+
+    .message {
+        max-width: 90%;
+    }
+}
+
+/* iPhone-first sizing and spacing */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        border-radius: 14px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+    }
+
+    /* Tighter header scale for small screens */
+    header {
+        padding: 20px 16px;
+    }
+
+    header h1 {
+        font-size: 1.75em;
+        margin-bottom: 6px;
+    }
+
+    .subtitle {
+        font-size: 0.95em;
+    }
+
+    /* Keep tabs on one line on most phones */
+    .tabs {
+        flex-wrap: nowrap;
+    }
+
+    .tab-btn {
+        padding: 10px 8px;
+        font-size: 0.92em;
+        white-space: nowrap;
+    }
+
+    .tab-content {
+        padding: 18px 14px;
+        min-height: auto;
+    }
+
+    h2 {
+        font-size: 1.3em;
+    }
+
+    .form-group {
+        margin-bottom: 14px;
+    }
+
+    /* Mobile controls: compact but easy to tap */
+    .btn-primary {
+        padding: 10px 18px;
+        font-size: 0.95em;
+    }
+
+    .btn-secondary {
+        padding: 9px 14px;
+        font-size: 0.9em;
+    }
+
+    /* Prevent iOS Safari input auto-zoom */
+    .form-group input,
+    .form-group textarea,
+    .form-group select,
+    .filter-section select,
+    .filter-section input,
+    .gift-panel-grid input,
+    .gift-panel-grid select,
+    .chat-input-group input {
+        font-size: 16px;
+    }
+
+    /* Filters use full width and consistent spacing */
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .filter-section select,
+    .filter-section input,
+    .semantic-toggle {
+        width: 100%;
+    }
+
+    .semantic-toggle {
+        justify-content: flex-start;
+        flex-basis: 100%;
+        white-space: normal;
+    }
+
+    /* Tighten list card spacing */
+    #memories-list {
+        gap: 10px;
+    }
+
+    .memory-card {
+        padding: 12px;
+    }
+
+    .memory-header,
+    .memory-text {
+        margin-bottom: 8px;
+    }
+
+    .memory-text {
+        line-height: 1.45;
+    }
+
+    /* Utility actions stack cleanly */
+    .utility-section {
+        flex-direction: column;
+        padding: 14px;
+    }
+
+    .utility-section .btn-secondary {
+        width: 100%;
+    }
+
+    .chat-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .chat-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    /* Make chat input row feel balanced */
+    .chat-input-group {
+        gap: 8px;
+    }
+
+    .chat-input-group .btn-primary {
+        padding-inline: 14px;
+    }
+
+    #chat-messages {
+        min-height: 220px;
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+
+    .message {
+        max-width: 100%;
+    }
+}
+
+/* Extra-small phones: stack tabs + actions to avoid crowding */
+@media (max-width: 360px) {
     .tabs {
         flex-direction: column;
     }
-    
-    .filter-section {
+
+    .tab-btn {
+        width: 100%;
+    }
+
+    .chat-actions,
+    .gift-panel-actions {
+        grid-template-columns: 1fr;
+        display: grid;
+    }
+
+    .chat-input-group {
         flex-direction: column;
     }
-    
-    .message {
-        max-width: 90%;
+
+    .chat-input-group .btn-primary {
+        align-self: flex-end;
     }
 }
